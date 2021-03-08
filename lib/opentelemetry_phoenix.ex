@@ -44,7 +44,7 @@ defmodule OpentelemetryPhoenix do
     _ = OpenTelemetry.register_application_tracer(:opentelemetry_phoenix)
     attach_endpoint_start_handler(opts)
     attach_endpoint_stop_handler(opts)
-    attach_router_start_handler()
+    attach_router_start_handler(opts)
     attach_router_dispatch_exception_handler()
 
     :ok
@@ -79,12 +79,12 @@ defmodule OpentelemetryPhoenix do
   end
 
   @doc false
-  def attach_router_start_handler do
+  def attach_router_start_handler(opts) do
     :telemetry.attach(
       {__MODULE__, :router_dispatch_start},
       [:phoenix, :router_dispatch, :start],
       &__MODULE__.handle_router_dispatch_start/4,
-      []
+      opts
     )
   end
 
@@ -138,12 +138,12 @@ defmodule OpentelemetryPhoenix do
   end
 
   @doc false
-  def handle_router_dispatch_start(_event, _measurements, meta, _config) do
+  def handle_router_dispatch_start(_event, _measurements, meta, config) do
     attributes = [
       "phoenix.plug": meta.plug,
       "phoenix.action": meta.plug_opts,
       "http.target": meta.route
-    ]
+    ] ++ build_additional_attributes(config)
 
     span_ctx = Tracer.current_span_ctx()
     Span.update_name(span_ctx, "#{meta.conn.method} #{meta.route}")
@@ -204,11 +204,17 @@ defmodule OpentelemetryPhoenix do
     end
   end
 
-  defp build_additional_attributes([additional_attributes: {func, args}]), do:
-    apply(func, args)
+  defp build_additional_attributes(config) when is_list(config) do
+    case config[:additional_attributes] do
+      {func, args} ->
+        apply(func, args)
 
-  defp build_additional_attributes([additional_attributes: attributes]) when is_list(attributes), do:
-    attributes
+      [] = attributes ->
+        attributes
 
-  defp build_additional_attributes(), do: []
+      _ -> []
+    end
+  end
+
+  defp build_additional_attributes(_), do: []
 end
