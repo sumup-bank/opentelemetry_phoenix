@@ -44,8 +44,8 @@ defmodule OpentelemetryPhoenix do
     _ = OpenTelemetry.register_application_tracer(:opentelemetry_phoenix)
     attach_endpoint_start_handler(opts)
     attach_endpoint_stop_handler(opts)
-    attach_router_start_handler(opts)
-    attach_router_dispatch_exception_handler(opts)
+    attach_router_start_handler()
+    attach_router_dispatch_exception_handler()
 
     :ok
   end
@@ -84,7 +84,7 @@ defmodule OpentelemetryPhoenix do
       {__MODULE__, :router_dispatch_start},
       [:phoenix, :router_dispatch, :start],
       &__MODULE__.handle_router_dispatch_start/4,
-      opts
+      []
     )
   end
 
@@ -94,7 +94,7 @@ defmodule OpentelemetryPhoenix do
       {__MODULE__, :router_dispatch_exception},
       [:phoenix, :router_dispatch, :exception],
       &__MODULE__.handle_router_dispatch_exception/4,
-      opts
+      []
     )
   end
 
